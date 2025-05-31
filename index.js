@@ -88,13 +88,13 @@ client.on('messageCreate', message => {
     const total = sum + data[statKey];
 
     let resultText = '';
-    if (total <= -4) resultText = '개같이실패';
+    if (total <= -3) resultText = '개같이실패';
     else if (total <= -1) resultText = '와장창';
     else if (total === 0) resultText = '엉성함';
     else if (total === 1) resultText = '약간의 실수';
     else if (total === 2) resultText = '무난함';
     else if (total === 3) resultText = '나이스!';
-    else if (total <= 6) resultText = '굿쟙!';
+    else if (total <= 5) resultText = '굿쟙!';
     else resultText = '대성공!!';
 
     message.channel.send(
