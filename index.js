@@ -10,7 +10,6 @@ const client = new Client({
 const token = process.env.DISCORD_TOKEN;
 const CHARACTER_FILE = 'character_data.json';
 
-// 캐릭터 데이터 불러오기
 let characterData = {};
 if (fs.existsSync(CHARACTER_FILE)) {
   characterData = JSON.parse(fs.readFileSync(CHARACTER_FILE, 'utf8'));
@@ -20,13 +19,9 @@ client.once('ready', () => {
   console.log('✅ CollieDice 온라인!');
 });
 
-// 주사위 판정 함수
-function rollDice(userId, statKey, label, message) {
+function rollDice(userId, statKey, label) {
   const char = characterData[userId];
-  if (!char) {
-    message.channel.send('❗ 등록된 캐릭터가 없습니다. 관리자에게 문의하세요.');
-    return;
-  }
+  if (!char) return null;
 
   const dice = () => Math.floor(Math.random() * 3) - 1;
   const rolls = [dice(), dice(), dice(), dice()];
@@ -43,9 +38,9 @@ function rollDice(userId, statKey, label, message) {
   else if (total <= 5) resultText = '굿쟙!';
   else resultText = '대성공!!';
 
-  message.channel.send(
-    `🎲 ${char.name}의 ${label} 판정 결과\n${rolls.map((v, i) => `${i + 1}= ${v}`).join(', ')} // 합계: ${sum}\n보정: ${char[statKey]}\n<<결과: ${total}>>\n${resultText}`
-  );
+  return {
+    text: `🎲 ${char.name}의 ${label} 판정 결과\n${rolls.map((v, i) => `${i + 1}= ${v}`).join(', ')} // 합계: ${sum}\n보정: ${char[statKey]}\n<<결과: ${total}>>\n${resultText}`
+  };
 }
 
 client.on('messageCreate', message => {
@@ -54,17 +49,23 @@ client.on('messageCreate', message => {
   const userId = message.author.id;
 
   if (message.content === '!숙련판정') {
-    rollDice(userId, 'skill', '숙련', message);
+    const result = rollDice(userId, 'skill', '숙련');
+    if (result) message.channel.send(result.text);
+    else message.channel.send('❗ 등록된 캐릭터가 없습니다. 관리자에게 문의하세요.');
     return;
   }
 
   if (message.content === '!간섭판정') {
-    rollDice(userId, 'interfere', '간섭', message);
+    const result = rollDice(userId, 'interfere', '간섭');
+    if (result) message.channel.send(result.text);
+    else message.channel.send('❗ 등록된 캐릭터가 없습니다. 관리자에게 문의하세요.');
     return;
   }
 
   if (message.content === '!수용판정') {
-    rollDice(userId, 'accept', '수용', message);
+    const result = rollDice(userId, 'accept', '수용');
+    if (result) message.channel.send(result.text);
+    else message.channel.send('❗ 등록된 캐릭터가 없습니다. 관리자에게 문의하세요.');
     return;
   }
 
@@ -118,7 +119,7 @@ client.on('messageCreate', message => {
     return;
   }
 
-  // 아무 명령어에도 해당되지 않으면 무시
+  // 여기까지 왔으면 명령어 아님 — 아무 동작도 하지 않음
 });
  
 client.login(token);
