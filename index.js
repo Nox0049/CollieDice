@@ -1,12 +1,21 @@
+// index.js
 const { Client, GatewayIntentBits } = require('discord.js');
+const fs = require('fs');
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
 require("dotenv").config();
-
 const token = process.env.DISCORD_TOKEN;
-const characterData = {};
+
+// character_data.json 불러오기
+let characterData = {};
+try {
+  const data = fs.readFileSync('./character_data.json');
+  characterData = JSON.parse(data);
+} catch (err) {
+  console.error('❗ 캐릭터 데이터 로드 실패:', err);
+}
 
 client.once('ready', () => {
   console.log('✅ CollieDice 온라인!');
@@ -14,73 +23,17 @@ client.once('ready', () => {
 
 client.on('messageCreate', message => {
   if (message.author.bot) return;
-
   const userId = message.author.id;
-
-  // 캐릭터 등록
-  if (message.content.startsWith('!등록 ')) {
-    const name = message.content.slice(4).trim();
-    if (!name) {
-      message.channel.send('❗ 사용법: `!등록 캐릭터이름`');
-      return;
-    }
-
-    characterData[userId] = {
-      name,
-      skill: 0,
-      interfere: 0,
-      accept: 0
-    };
-
-    message.channel.send(`✅ ${name} 캐릭터가 등록되었습니다!`);
-    return;
-  }
-
-  // 능력치 설정
-  if (/^!숙련\s+\d+$/.test(message.content)) {
-    const [, valueStr] = message.content.split(' ');
-    const value = parseInt(valueStr);
-    if (!characterData[userId]) {
-      message.channel.send('❗ 먼저 `!등록 캐릭터이름`으로 캐릭터를 등록해주세요.');
-    } else {
-      characterData[userId].skill = value;
-      message.channel.send(`✅ 숙련 수치가 ${value}으로 설정되었습니다.`);
-    }
-    return;
-  }
-
-  if (/^!간섭\s+\d+$/.test(message.content)) {
-    const [, valueStr] = message.content.split(' ');
-    const value = parseInt(valueStr);
-    if (!characterData[userId]) {
-      message.channel.send('❗ 먼저 `!등록 캐릭터이름`으로 캐릭터를 등록해주세요.');
-    } else {
-      characterData[userId].interfere = value;
-      message.channel.send(`✅ 간섭 수치가 ${value}으로 설정되었습니다.`);
-    }
-    return;
-  }
-
-  if (/^!수용\s+\d+$/.test(message.content)) {
-    const [, valueStr] = message.content.split(' ');
-    const value = parseInt(valueStr);
-    if (!characterData[userId]) {
-      message.channel.send('❗ 먼저 `!등록 캐릭터이름`으로 캐릭터를 등록해주세요.');
-    } else {
-      characterData[userId].accept = value;
-      message.channel.send(`✅ 수용 수치가 ${value}으로 설정되었습니다.`);
-    }
-    return;
-  }
 
   // 판정 함수
   function rollDice(statKey, label) {
-    if (!characterData[userId]) {
-      message.channel.send('❗ 등록된 캐릭터가 없습니다. `!등록 캐릭터이름`으로 먼저 등록해주세요.');
+    const userName = Object.keys(characterData).find(name => message.content.includes(name));
+    if (!userName || !characterData[userName]) {
+      message.channel.send('❗ 캐릭터 이름을 포함해서 메시지를 보내주세요. 예: `콜린 백스터 !숙련판정`');
       return;
     }
 
-    const data = characterData[userId];
+    const data = characterData[userName];
     const dice = () => Math.floor(Math.random() * 3) - 1;
     const rolls = [dice(), dice(), dice(), dice()];
     const sum = rolls.reduce((a, b) => a + b, 0);
@@ -97,22 +50,22 @@ client.on('messageCreate', message => {
     else resultText = '대성공!!';
 
     message.channel.send(
-      `🎲 ${label} 판정 결과\n${rolls.map((v, i) => `${i + 1}= ${v}`).join(', ')} // 합계: ${sum}\n보정: ${data[statKey]}\n<<결과: ${total}>>\n${resultText}`
+      `🎲 ${label} 판정 결과 (${userName})\n${rolls.map((v, i) => `${i + 1}= ${v}`).join(', ')} // 합계: ${sum}\n보정: ${data[statKey]}\n<<결과: ${total}>>\n${resultText}`
     );
   }
 
   // 판정 명령어
-  if (message.content === '!숙련판정') {
+  if (message.content.includes('!숙련판정')) {
     rollDice('skill', '숙련');
     return;
   }
 
-  if (message.content === '!간섭판정') {
+  if (message.content.includes('!간섭판정')) {
     rollDice('interfere', '간섭');
     return;
   }
 
-  if (message.content === '!수용판정') {
+  if (message.content.includes('!수용판정')) {
     rollDice('accept', '수용');
     return;
   }
@@ -127,12 +80,13 @@ client.on('messageCreate', message => {
 
   // 간섭판정 기반 랜덤 메뉴
   if (message.content === '!랜덤메뉴') {
-    if (!characterData[userId]) {
-      message.channel.send('❗ 먼저 `!등록 캐릭터이름`으로 캐릭터를 등록해주세요.');
+    const userName = Object.keys(characterData).find(name => message.content.includes(name));
+    if (!userName || !characterData[userName]) {
+      message.channel.send('❗ 캐릭터 이름을 포함해서 메시지를 보내주세요. 예: `콜린 백스터 !랜덤메뉴`');
       return;
     }
 
-    const interfere = characterData[userId].interfere ?? 0;
+    const interfere = characterData[userName].interfere ?? 0;
     const dice = () => Math.floor(Math.random() * 3) - 1;
     const rolls = [dice(), dice(), dice(), dice()];
     const sum = rolls.reduce((a, b) => a + b, 0);
@@ -154,11 +108,10 @@ client.on('messageCreate', message => {
     else resultText = '🤩';
 
     message.channel.send(
-      `🎲 랜덤메뉴 결과\n${rolls.map((v, i) => `${i + 1}= ${v}`).join(', ')} // 합계: ${sum}\n보정: ${interfere}\n<<결과: ${total}>>\n${resultText}\n🍱 오늘의 메뉴는: ${selectedMenu}`
+      `🎲 랜덤메뉴 결과 (${userName})\n${rolls.map((v, i) => `${i + 1}= ${v}`).join(', ')} // 합계: ${sum}\n보정: ${interfere}\n<<결과: ${total}>>\n${resultText}\n🍱 오늘의 메뉴는: ${selectedMenu}`
     );
     return;
   }
 });
 
-// 로그인
 client.login(token);
