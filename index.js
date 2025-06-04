@@ -50,14 +50,24 @@ function rollDice(userId, statKey, label, message) {
 
 client.on('messageCreate', message => {
   if (message.author.bot) return;
+
   const userId = message.author.id;
 
-  // 스탯 판정 명령어
-  if (message.content === '!숙련판정') return rollDice(userId, 'skill', '숙련', message);
-  if (message.content === '!간섭판정') return rollDice(userId, 'interfere', '간섭', message);
-  if (message.content === '!수용판정') return rollDice(userId, 'accept', '수용', message);
+  if (message.content === '!숙련판정') {
+    rollDice(userId, 'skill', '숙련', message);
+    return;
+  }
 
-  // 단순 랜덤 메뉴
+  if (message.content === '!간섭판정') {
+    rollDice(userId, 'interfere', '간섭', message);
+    return;
+  }
+
+  if (message.content === '!수용판정') {
+    rollDice(userId, 'accept', '수용', message);
+    return;
+  }
+
   if (message.content === '!메뉴') {
     const menuList = ["김치찌개", "초밥", "파스타", "치킨", "불고기", "된장찌개", "비빔밥", "라멘"];
     const randomMenu = menuList[Math.floor(Math.random() * menuList.length)];
@@ -65,7 +75,6 @@ client.on('messageCreate', message => {
     return;
   }
 
-  // 간섭판정 기반 랜덤 메뉴
   if (message.content === '!랜덤메뉴') {
     const char = characterData[userId];
     if (!char) {
@@ -108,6 +117,8 @@ client.on('messageCreate', message => {
     );
     return;
   }
-});
 
+  // 아무 명령어에도 해당되지 않으면 무시
+});
+ 
 client.login(token);
